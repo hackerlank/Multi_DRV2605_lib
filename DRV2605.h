@@ -21,7 +21,6 @@
  #include "WProgram.h"
 #endif
 
-#include <Wire.h>
 
 #define DRV2605_ADDR 0x5A
 
@@ -69,14 +68,21 @@
 #define DRV2605_REG_LRARESON 0x22
 
 
-class Adafruit_DRV2605 {
+class DRV2605 {
  public:
 
-  Adafruit_DRV2605(void);
-  boolean begin(void);  
+  DRV2605(void);
 
-  void writeRegister8(uint8_t reg, uint8_t val);
-  uint8_t readRegister8(uint8_t reg);
+  // mine 
+  boolean init(uint8_t adrs, boolean lra);  
+  void setPWM(uint8_t adrs, uint8_t rtp);
+  
+  // workaround for default methods
+  void setAddress(uint8_t a);
+  void offsetAddress(uint8_t o);
+
+  // default
+  boolean begin(void);
   void setWaveform(uint8_t slot, uint8_t w);
   void selectLibrary(uint8_t lib);
   void go(void);
@@ -88,7 +94,14 @@ class Adafruit_DRV2605 {
   void useERM();
   void useLRA();
 
+  void writeRegister8(uint8_t adrs, uint8_t reg, uint8_t val);
+  uint8_t readRegister8(uint8_t adrs, uint8_t reg);
+  
+  void writeRegister8(uint8_t reg, uint8_t val);
+  uint8_t readRegister8(uint8_t reg);
+  
  private:
-
+  // mine
+  uint8_t address;
 };
 

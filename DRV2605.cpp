@@ -21,9 +21,9 @@
  #include "WProgram.h"
 #endif
 
-#include <Wire.h>
+#include <I2C.h>
 
-#include <Adafruit_DRV2605.h>
+#include <DRV2605.h>
 
 /**************************************************************************/
 /*! 
@@ -31,19 +31,40 @@
 */
 /**************************************************************************/
 // I2C, no address adjustments or pins
-Adafruit_DRV2605::Adafruit_DRV2605() {
+DRV2605::DRV2605() {
+  address=DRV2605_ADDR;
 }
 
 
+boolean DRV2605::init(uint8_t adrs, boolean lra) {
+  //uint8_t id = readRegister8(DRV2605_REG_STATUS);
+  writeRegister8(adrs,DRV2605_REG_MODE, DRV2605_MODE_REALTIME); // out of standby
+  writeRegister8(adrs,DRV2605_REG_RTPIN, 0x00); // disable input pin (I think)
+  writeRegister8(adrs,DRV2605_REG_WAVESEQ1, 1); // strong click
+  writeRegister8(adrs,DRV2605_REG_WAVESEQ2, 0);
+  
+}
+
+void DRV2605::setPWM(uint8_t adrs, uint8_t rtp){
+  writeRegister8(adrs,DRV2605_REG_RTPIN, rtp);
+}
+
+void DRV2605::setAddress(uint8_t a) {
+  address=a;
+}
+
+void DRV2605::offsetAddress(uint8_t o) {
+  address=DRV2605_ADDR+o;
+}
 /**************************************************************************/
 /*! 
     @brief  Setups the HW
 */
 /**************************************************************************/
-boolean Adafruit_DRV2605::begin() {
-  Wire.begin();
+boolean DRV2605::begin() {
+  // moved outside - other libs may used the Wire
+  // Wire.begin();
   uint8_t id = readRegister8(DRV2605_REG_STATUS);
-  //Serial.print("Status 0x"); Serial.println(id, HEX);
   
   writeRegister8(DRV2605_REG_MODE, 0x00); // out of standby
   
@@ -69,53 +90,62 @@ boolean Adafruit_DRV2605::begin() {
   return true;
 }
 
-void Adafruit_DRV2605::setWaveform(uint8_t slot, uint8_t w) {
+void DRV2605::setWaveform(uint8_t slot, uint8_t w) {
   writeRegister8(DRV2605_REG_WAVESEQ1+slot, w);
 }
 
-void Adafruit_DRV2605::selectLibrary(uint8_t lib) {
+void DRV2605::selectLibrary(uint8_t lib) {
   writeRegister8(DRV2605_REG_LIBRARY, lib);
 }
 
-void Adafruit_DRV2605::go() {
+void DRV2605::go() {
   writeRegister8(DRV2605_REG_GO, 1);
 }
 
-void Adafruit_DRV2605::stop() {
+void DRV2605::stop() {
   writeRegister8(DRV2605_REG_GO, 0);
 }
 
-void Adafruit_DRV2605::setMode(uint8_t mode) {
+void DRV2605::setMode(uint8_t mode) {
   writeRegister8(DRV2605_REG_MODE, mode);
 }
 
-void Adafruit_DRV2605::setRealtimeValue(uint8_t rtp) {
+void DRV2605::setRealtimeValue(uint8_t rtp) {
   writeRegister8(DRV2605_REG_RTPIN, rtp);
 }
 
 /********************************************************************/
 
-uint8_t Adafruit_DRV2605::readRegister8(uint8_t reg) {
-  uint8_t x ;
-   // use i2c
-    Wire.beginTransmission(DRV2605_ADDR);
-    Wire.write((byte)reg);
-    Wire.endTransmission();
-    Wire.requestFrom((byte)DRV2605_ADDR, (byte)1);
-    x = Wire.read();
-
-  //  Serial.print("$"); Serial.print(reg, HEX); 
-  //  Serial.print(": 0x"); Serial.println(x, HEX);
-  
-  return x;
+uint8_t DRV2605::readRegister8(uint8_t reg) {
+  return readRegister8(address, reg);
 }
 
-void Adafruit_DRV2605::writeRegister8(uint8_t reg, uint8_t val) {
+uint8_t DRV2605::readRegister8(uint8_t adrs, uint8_t reg) {
+  /*
+  uint8_t x ;
+  Wire.beginTransmission(adrs);
+  Wire.write((byte)reg);
+  Wire.endTransmission();
+  Wire.requestFrom((byte)adrs, (byte)1);
+  x = Wire.read();
+  return x;
+  */
+  I2c.read(adrs,reg,1);
+}
+
+void DRV2605::writeRegister8(uint8_t reg, uint8_t val) {
+  writeRegister8(address, reg, val);
+}
+
+void DRV2605::writeRegister8(uint8_t adrs, uint8_t reg, uint8_t val) {
    // use i2c
-    Wire.beginTransmission(DRV2605_ADDR);
+   /*
+    Wire.beginTransmission(adrs);
     Wire.write((byte)reg);
     Wire.write((byte)val);
     Wire.endTransmission();
+    */
+    I2c.write(adrs,reg,val);
 }
 
 /****************/
@@ -123,12 +153,12 @@ void Adafruit_DRV2605::writeRegister8(uint8_t reg, uint8_t val) {
 
 // Allow users to use ERM motor or LRA motors
 
-void Adafruit_DRV2605::useERM ()
+void DRV2605::useERM ()
 {
   writeRegister8(DRV2605_REG_FEEDBACK, readRegister8(DRV2605_REG_FEEDBACK) & 0x7F);
 }
 
-void Adafruit_DRV2605::useLRA ()
+void DRV2605::useLRA ()
 {
   writeRegister8(DRV2605_REG_FEEDBACK, readRegister8(DRV2605_REG_FEEDBACK) | 0x80);
 }
